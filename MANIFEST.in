@@ -1,0 +1,4 @@
+include CHANGELOG conf.py index.rst
+recursive-include dropbox *
+recursive-include tests *
+recursive-include testfiles *
