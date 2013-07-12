@@ -8,7 +8,7 @@ import posixpath
 
 from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
-     render_template, flash, _app_ctx_stack
+    render_template, flash, _app_ctx_stack
 
 from dropbox.client import DropboxClient, DropboxOAuth2Flow
 
@@ -32,6 +32,7 @@ try:
 except OSError:
     pass
 
+
 def init_db():
     """Creates the database tables."""
     with app.app_context():
@@ -47,21 +48,25 @@ def get_db():
     """
     top = _app_ctx_stack.top
     if not hasattr(top, 'sqlite_db'):
-        sqlite_db = sqlite3.connect(os.path.join(app.instance_path, app.config['DATABASE']))
+        sqlite_db = sqlite3.connect(
+            os.path.join(app.instance_path, app.config['DATABASE']))
         sqlite_db.row_factory = sqlite3.Row
         top.sqlite_db = sqlite_db
 
     return top.sqlite_db
+
 
 def get_access_token():
     username = session.get('user')
     if username is None:
         return None
     db = get_db()
-    row = db.execute('SELECT access_token FROM users WHERE username = ?', [username]).fetchone()
+    row = db.execute(
+        'SELECT access_token FROM users WHERE username = ?', [username]).fetchone()
     if row is None:
         return None
     return row[0]
+
 
 @app.route('/')
 def home():
@@ -76,6 +81,7 @@ def home():
         real_name = account_info["display_name"]
     return render_template('index.html', real_name=real_name)
 
+
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
     username = session.get('user')
@@ -83,16 +89,16 @@ def dropbox_auth_finish():
         abort(403)
     try:
         access_token, user_id, url_state = get_auth_flow().finish(request.args)
-    except DropboxOAuth2Flow.BadRequestException, e:
+    except DropboxOAuth2Flow.BadRequestException as e:
         abort(400)
-    except DropboxOAuth2Flow.BadStateException, e:
+    except DropboxOAuth2Flow.BadStateException as e:
         abort(400)
-    except DropboxOAuth2Flow.CsrfException, e:
+    except DropboxOAuth2Flow.CsrfException as e:
         abort(403)
-    except DropboxOAuth2Flow.NotApprovedException, e:
+    except DropboxOAuth2Flow.NotApprovedException as e:
         flash('Not approved?  Why not, bro?')
         return redirect(url_for('home'))
-    except DropboxOAuth2Flow.ProviderException, e:
+    except DropboxOAuth2Flow.ProviderException as e:
         app.logger.exception("Auth error" + e)
         abort(403)
     db = get_db()
@@ -101,11 +107,13 @@ def dropbox_auth_finish():
     db.commit()
     return redirect(url_for('home'))
 
+
 @app.route('/dropbox-auth-start')
 def dropbox_auth_start():
     if 'user' not in session:
         abort(403)
     return redirect(get_auth_flow().start())
+
 
 @app.route('/dropbox-unlink')
 def dropbox_unlink():
@@ -113,14 +121,17 @@ def dropbox_unlink():
     if username is None:
         abort(403)
     db = get_db()
-    db.execute('UPDATE users SET access_token = NULL WHERE username = ?', [username])
+    db.execute(
+        'UPDATE users SET access_token = NULL WHERE username = ?', [username])
     db.commit()
     return redirect(url_for('home'))
+
 
 def get_auth_flow():
     redirect_uri = url_for('dropbox_auth_finish', _external=True)
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
-                                       session, 'dropbox-auth-csrf-token')
+                             session, 'dropbox-auth-csrf-token')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -129,7 +140,8 @@ def login():
         username = request.form['username']
         if username:
             db = get_db()
-            db.execute('INSERT OR IGNORE INTO users (username) VALUES (?)', [username])
+            db.execute(
+                'INSERT OR IGNORE INTO users (username) VALUES (?)', [username])
             db.commit()
             session['user'] = username
             flash('You were logged in')
@@ -137,6 +149,7 @@ def login():
         else:
             flash("You must provide a username")
     return render_template('login.html', error=error)
+
 
 @app.route('/logout')
 def logout():

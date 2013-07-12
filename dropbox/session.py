@@ -22,14 +22,18 @@ except ImportError:
 
 from . import rest
 
+
 class OAuthToken(object):
+
     """
     A class representing an OAuth token. Contains two fields: ``key`` and
     ``secret``.
     """
+
     def __init__(self, key, secret):
         self.key = key
         self.secret = secret
+
 
 class BaseSession(object):
     API_VERSION = 1
@@ -38,7 +42,8 @@ class BaseSession(object):
     WEB_HOST = "www.dropbox.com"
     API_CONTENT_HOST = "api-content.dropbox.com"
 
-    def __init__(self, consumer_key, consumer_secret, access_type="auto", locale=None, rest_client=rest.RESTClient):
+    def __init__(self, consumer_key, consumer_secret,
+                 access_type="auto", locale=None, rest_client=rest.RESTClient):
         """Initialize a DropboxSession object.
 
         Your consumer key and secret are available
@@ -58,7 +63,8 @@ class BaseSession(object):
                 messages in rest.ErrorResponse exceptions as e.user_error_msg.
 
         """
-        assert access_type in ['dropbox', 'app_folder', 'auto'], "expected access_type of 'dropbox' or 'app_folder'"
+        assert access_type in [
+            'dropbox', 'app_folder', 'auto'], "expected access_type of 'dropbox' or 'app_folder'"
         self.consumer_creds = OAuthToken(consumer_key, consumer_secret)
         self.token = None
         self.request_token = None
@@ -88,7 +94,7 @@ class BaseSession(object):
         Returns:
             - The path and parameters components of an API URL.
         """
-        if sys.version_info < (3,) and type(target) == unicode:
+        if sys.version_info < (3,) and isinstance(target, unicode):
             target = target.encode("utf8")
 
         target_path = urllib.quote(target)
@@ -118,6 +124,7 @@ class BaseSession(object):
             - The full API URL.
         """
         return "https://%s%s" % (host, self.build_path(target, params))
+
 
 class DropboxSession(BaseSession):
 
@@ -177,11 +184,12 @@ class DropboxSession(BaseSession):
               request token Dropbox assigned to this app. Also attaches the
               request token as self.request_token.
         """
-        self.token = None # clear any token currently on the request
+        self.token = None  # clear any token currently on the request
         url = self.build_url(self.API_HOST, '/oauth/request_token')
         headers, params = self.build_access_headers('POST', url)
 
-        response = self.rest_client.POST(url, headers=headers, params=params, raw_response=True)
+        response = self.rest_client.POST(
+            url, headers=headers, params=params, raw_response=True)
         self.request_token = self._parse_token(response.read())
         return self.request_token
 
@@ -209,13 +217,16 @@ class DropboxSession(BaseSession):
         request_token = request_token or self.request_token
         assert request_token, "No request_token available on the session. Please pass one."
         url = self.build_url(self.API_HOST, '/oauth/access_token')
-        headers, params = self.build_access_headers('POST', url, request_token=request_token)
+        headers, params = self.build_access_headers(
+            'POST', url, request_token=request_token)
 
-        response = self.rest_client.POST(url, headers=headers, params=params, raw_response=True)
+        response = self.rest_client.POST(
+            url, headers=headers, params=params, raw_response=True)
         self.token = self._parse_token(response.read())
         return self.token
 
-    def build_access_headers(self, method, resource_url, params=None, request_token=None):
+    def build_access_headers(
+            self, method, resource_url, params=None, request_token=None):
         """Build OAuth access headers for a future request.
 
         Args:
@@ -236,10 +247,10 @@ class DropboxSession(BaseSession):
             params = params.copy()
 
         oauth_params = {
-            'oauth_consumer_key' : self.consumer_creds.key,
-            'oauth_timestamp' : self._generate_oauth_timestamp(),
-            'oauth_nonce' : self._generate_oauth_nonce(),
-            'oauth_version' : self._oauth_version(),
+            'oauth_consumer_key': self.consumer_creds.key,
+            'oauth_timestamp': self._generate_oauth_timestamp(),
+            'oauth_nonce': self._generate_oauth_nonce(),
+            'oauth_version': self._oauth_version(),
         }
 
         token = request_token if request_token is not None else self.token
@@ -255,10 +266,10 @@ class DropboxSession(BaseSession):
 
     @classmethod
     def _oauth_sign_request(cls, params, consumer_pair, token_pair):
-        params.update({'oauth_signature_method' : 'PLAINTEXT',
-                       'oauth_signature' : ('%s&%s' % (consumer_pair.secret, token_pair.secret)
-                                            if token_pair is not None else
-                                            '%s&' % (consumer_pair.secret,))})
+        params.update({'oauth_signature_method': 'PLAINTEXT',
+                       'oauth_signature': ('%s&%s' % (consumer_pair.secret, token_pair.secret)
+                                           if token_pair is not None else
+                                           '%s&' % (consumer_pair.secret,))})
 
     @classmethod
     def _generate_oauth_timestamp(cls):
@@ -295,13 +306,18 @@ class DropboxSession(BaseSession):
         return OAuthToken(key, secret)
 
 # Don't use this class directly.
+
+
 class DropboxOAuth2Session(BaseSession):
 
-    def __init__(self, oauth2_access_token, locale, rest_client=rest.RESTClient):
-        super(DropboxOAuth2Session, self).__init__("", "", "auto", locale=locale, rest_client=rest_client)
+    def __init__(self, oauth2_access_token,
+                 locale, rest_client=rest.RESTClient):
+        super(DropboxOAuth2Session, self).__init__(
+            "", "", "auto", locale=locale, rest_client=rest_client)
         self.access_token = oauth2_access_token
 
-    def build_access_headers(self, method, resource_url, params=None, token=None):
+    def build_access_headers(
+            self, method, resource_url, params=None, token=None):
         assert token is None
         headers = {"Authorization": "Bearer " + self.access_token}
         return headers, params

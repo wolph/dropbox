@@ -11,7 +11,8 @@ parent_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 INSTALL_REQUIRES = []
 if sys.version_info < (2, 6):
-    INSTALL_REQUIRES.append('simplejson') # The 'json' module is included with Python 2.6+
+    INSTALL_REQUIRES.append('simplejson')
+                            # The 'json' module is included with Python 2.6+
     INSTALL_REQUIRES.append('ssl')  # This module is built in to Python 2.6+
 
 extra = {}
@@ -40,8 +41,8 @@ setup(name='dropbox',
       packages=['dropbox', 'tests'],
       install_requires=INSTALL_REQUIRES,
       package_data={'dropbox': ['trusted-certs.crt'],
-                    'tests' : ['server.crt', 'server.key']},
+                    'tests': ['server.crt', 'server.key']},
       test_suite=TEST_SUITE,
       tests_require=['mock'],
       **extra
-     )
+      )
