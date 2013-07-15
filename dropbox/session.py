@@ -144,7 +144,7 @@ class DropboxSession(BaseSession):
         """
         self.request_token = OAuthToken(request_token, request_token_secret)
 
-    def build_authorize_url(self, request_token, oauth_callback=None):
+    def build_authorize_url(self, request_token=None, oauth_callback=None):
         """Build a request token authorization URL.
 
         After obtaining a request token, you'll need to send the user to
@@ -159,8 +159,10 @@ class DropboxSession(BaseSession):
         Returns:
             - An authorization for the given request token.
         """
-        params = {'oauth_token': request_token.key,
-                  }
+        request_token = request_token or self.request_token
+        params = {
+            'oauth_token': request_token.key,
+        }
 
         if oauth_callback:
             params['oauth_callback'] = oauth_callback
