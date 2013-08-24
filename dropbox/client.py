@@ -14,13 +14,14 @@ except ImportError:
 from .rest import ErrorResponse, RESTClient
 from .session import BaseSession, DropboxSession, DropboxOAuth2Session
 
+
 def format_path(path):
-    """Normalize path for use with the Dropbox API.
+    '''Normalize path for use with the Dropbox API.
 
     This function turns multiple adjacent slashes into single
     slashes, then ensures that there's a leading slash but
     not a trailing slash.
-    """
+    '''
     if not path:
         return path
 
@@ -31,8 +32,10 @@ def format_path(path):
     else:
         return '/' + path.strip('/')
 
+
 class DropboxClient(object):
-    """
+
+    '''
     The class that lets you make Dropbox API calls.  You'll need to obtain an
     OAuth 2 access token first.  You can get an access token using either
     :class:`DropboxOAuth2Flow` or :class:`DropboxOAuth2FlowNoRedirect`.
@@ -47,10 +50,11 @@ class DropboxClient(object):
     return status at any point indicates that the access token you're using
     is no longer valid and the user must be put through the OAuth 2
     authorization flow again.
-    """
+    '''
 
     def __init__(self, oauth2_access_token, locale=None, rest_client=None):
-        if rest_client is None: rest_client = RESTClient
+        if rest_client is None:
+            rest_client = RESTClient
         if isinstance(oauth2_access_token, basestring):
             self.session = DropboxOAuth2Session(oauth2_access_token, locale)
         elif isinstance(oauth2_access_token, DropboxSession):
@@ -60,11 +64,17 @@ class DropboxClient(object):
                                  "when also passing in an OAuth 2 access token")
             self.session = oauth2_access_token
         else:
-            raise ValueError("'oauth2_access_token' must either be a string or a DropboxSession")
+            raise ValueError(
+                "'oauth2_access_token' must either be a string or a DropboxSession")
         self.rest_client = rest_client
 
-    def request(self, target, params=None, method='POST', content_server=False):
-        """
+    def request(
+        self,
+        target,
+        params=None,
+        method='POST',
+            content_server=False):
+        '''
         An internal method that builds the url, headers, and params for a Dropbox API request.
         It is exposed if you need to make API calls not implemented in this library or if you
         need to debug requests.
@@ -80,14 +90,16 @@ class DropboxClient(object):
         Returns:
             - A tuple of ``(url, params, headers)`` that should be used to make the request.
               OAuth will be added as needed within these fields.
-        """
-        assert method in ['GET','POST', 'PUT'], "Only 'GET', 'POST', and 'PUT' are allowed."
+        '''
+        assert method in [
+            'GET', 'POST', 'PUT'], "Only 'GET', 'POST', and 'PUT' are allowed."
         if params is None:
             params = {}
 
         host = self.session.API_CONTENT_HOST if content_server else self.session.API_HOST
         base = self.session.build_url(host, target)
-        headers, params = self.session.build_access_headers(method, base, params)
+        headers, params = self.session.build_access_headers(
+            method, base, params)
 
         if method in ('GET', 'PUT'):
             url = self.session.build_url(host, target, params)
@@ -96,22 +108,21 @@ class DropboxClient(object):
 
         return url, params, headers
 
-
     def account_info(self):
-        """Retrieve information about the user's account.
+        '''Retrieve information about the user's account.
 
         Returns:
             - A dictionary containing account information.
 
               For a detailed description of what this call returns, visit:
               https://www.dropbox.com/developers/reference/api#account-info
-        """
+        '''
         url, params, headers = self.request("/account/info", method='GET')
 
         return self.rest_client.GET(url, headers)
 
     def get_chunked_uploader(self, file_obj, length):
-        """Creates a ChunkedUploader to upload the given file-like object.
+        '''Creates a ChunkedUploader to upload the given file-like object.
 
         Args:
             - ``file_obj``: The file-like object which is the source of the data
@@ -136,13 +147,15 @@ class DropboxClient(object):
         The SDK leaves the error handling and retry logic to the developer
         to implement, as the exact requirements will depend on the application
         involved.
-        """
+        '''
         return DropboxClient.ChunkedUploader(self, file_obj, length)
 
     class ChunkedUploader(object):
-        """Contains the logic around a chunked upload, which uploads a
+
+        '''Contains the logic around a chunked upload, which uploads a
         large file to Dropbox via the /chunked_upload endpoint
-        """
+        '''
+
         def __init__(self, client, file_obj, length):
             self.client = client
             self.offset = 0
@@ -152,25 +165,26 @@ class DropboxClient(object):
             self.file_obj = file_obj
             self.target_length = length
 
-
-        def upload_chunked(self, chunk_size = 4 * 1024 * 1024):
-            """Uploads data from this ChunkedUploader's file_obj in chunks, until
+        def upload_chunked(self, chunk_size=4 * 1024 * 1024):
+            '''Uploads data from this ChunkedUploader's file_obj in chunks, until
             an error occurs. Throws an exception when an error occurs, and can
             be called again to resume the upload.
 
             Args:
                 - ``chunk_size``: The number of bytes to put in each chunk. [default 4 MB]
-            """
+            '''
 
             while self.offset < self.target_length:
-                next_chunk_size = min(chunk_size, self.target_length - self.offset)
-                if self.last_block == None:
+                next_chunk_size = min(
+                    chunk_size, self.target_length - self.offset)
+                if self.last_block is None:
                     self.last_block = self.file_obj.read(next_chunk_size)
 
                 try:
-                    (self.offset, self.upload_id) = self.client.upload_chunk(StringIO(self.last_block), next_chunk_size, self.offset, self.upload_id)
+                    (self.offset, self.upload_id) = self.client.upload_chunk(
+                        StringIO(self.last_block), next_chunk_size, self.offset, self.upload_id)
                     self.last_block = None
-                except ErrorResponse, e:
+                except ErrorResponse as e:
                     reply = e.body
                     if "offset" in reply and reply['offset'] != 0:
                         if reply['offset'] > self.offset:
@@ -178,7 +192,7 @@ class DropboxClient(object):
                             self.offset = reply['offset']
 
         def finish(self, path, overwrite=False, parent_rev=None):
-            """Commits the bytes uploaded by this ChunkedUploader to a file
+            '''Commits the bytes uploaded by this ChunkedUploader to a file
             in the users dropbox.
 
             Args:
@@ -198,24 +212,26 @@ class DropboxClient(object):
                   Using this parameter effectively causes the overwrite parameter to be ignored.
                   The file will always be overwritten if you send the most-recent parent_rev,
                   and it will never be overwritten if you send a less-recent one.
-            """
+            '''
 
-            path = "/commit_chunked_upload/%s%s" % (self.client.session.root, format_path(path))
+            path = "/commit_chunked_upload/%s%s" % (
+                self.client.session.root, format_path(path))
 
             params = dict(
-                overwrite = bool(overwrite),
-                upload_id = self.upload_id
+                overwrite=bool(overwrite),
+                upload_id=self.upload_id
             )
 
             if parent_rev is not None:
                 params['parent_rev'] = parent_rev
 
-            url, params, headers = self.client.request(path, params, content_server=True)
+            url, params, headers = self.client.request(
+                path, params, content_server=True)
 
             return self.client.rest_client.POST(url, params, headers)
 
     def upload_chunk(self, file_obj, length, offset=0, upload_id=None):
-        """Uploads a single chunk of data from the given file like object. The majority of users
+        '''Uploads a single chunk of data from the given file like object. The majority of users
         should use the ChunkedUploader object, which provides a simpler interface to the
         chunked_upload API endpoint.
 
@@ -225,7 +241,7 @@ class DropboxClient(object):
 
         Returns:
             - The reply from the server, as a dictionary
-        """
+        '''
 
         params = dict()
 
@@ -233,18 +249,18 @@ class DropboxClient(object):
             params['upload_id'] = upload_id
             params['offset'] = offset
 
-        url, ignored_params, headers = self.request("/chunked_upload", params, method='PUT', content_server=True)
+        url, ignored_params, headers = self.request(
+            "/chunked_upload", params, method='PUT', content_server=True)
 
         try:
             reply = self.rest_client.PUT(url, file_obj, headers)
             return reply['offset'], reply['upload_id']
-        except ErrorResponse, e:
+        except ErrorResponse as e:
             raise e
 
-
     def put_file(self, full_path, file_obj, overwrite=False, parent_rev=None):
-        """Upload a file.
-        
+        '''Upload a file.
+
         A typical use case would be as follows:
 
         .. code-block:: python
@@ -305,23 +321,23 @@ class DropboxClient(object):
 
         Note: In Python versions below version 2.6, httplib doesn't handle file-like objects.
         In that case, this code will read the entire file into memory (!).
-        """
+        '''
         path = "/files_put/%s%s" % (self.session.root, format_path(full_path))
 
         params = {
             'overwrite': bool(overwrite),
-            }
+        }
 
         if parent_rev is not None:
             params['parent_rev'] = parent_rev
 
-
-        url, params, headers = self.request(path, params, method='PUT', content_server=True)
+        url, params, headers = self.request(
+            path, params, method='PUT', content_server=True)
 
         return self.rest_client.PUT(url, file_obj, headers)
 
     def get_file(self, from_path, rev=None):
-        """Download a file.
+        '''Download a file.
 
         Unlike most other calls, get_file returns a raw HTTPResponse with the connection open.
         You should call .read() and perform any processing you need, then close the HTTPResponse.
@@ -350,18 +366,19 @@ class DropboxClient(object):
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at the given path, or the file that was there was deleted.
               - 200: Request was okay but response was malformed in some way.
-        """
+        '''
         path = "/files/%s%s" % (self.session.root, format_path(from_path))
 
         params = {}
         if rev is not None:
             params['rev'] = rev
 
-        url, params, headers = self.request(path, params, method='GET', content_server=True)
+        url, params, headers = self.request(
+            path, params, method='GET', content_server=True)
         return self.rest_client.request("GET", url, headers=headers, raw_response=True)
 
     def get_file_and_metadata(self, from_path, rev=None):
-        """Download a file alongwith its metadata.
+        '''Download a file alongwith its metadata.
 
         Acts as a thin wrapper around get_file() (see :meth:`get_file()` comments for
         more details)
@@ -389,7 +406,7 @@ class DropboxClient(object):
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at the given path, or the file that was there was deleted.
               - 200: Request was okay but response was malformed in some way.
-        """
+        '''
         file_res = self.get_file(from_path, rev)
         metadata = DropboxClient.__parse_metadata_as_dict(file_res)
 
@@ -397,9 +414,9 @@ class DropboxClient(object):
 
     @staticmethod
     def __parse_metadata_as_dict(dropbox_raw_response):
-        """Parses file metadata from a raw dropbox HTTP response, raising a
+        '''Parses file metadata from a raw dropbox HTTP response, raising a
         :class:`dropbox.rest.ErrorResponse` if parsing fails.
-        """
+        '''
         metadata = None
         for header, header_val in dropbox_raw_response.getheaders():
             if header.lower() == 'x-dropbox-metadata':
@@ -407,11 +424,12 @@ class DropboxClient(object):
                     metadata = json.loads(header_val)
                 except ValueError:
                     raise ErrorResponse(dropbox_raw_response)
-        if not metadata: raise ErrorResponse(dropbox_raw_response)
+        if not metadata:
+            raise ErrorResponse(dropbox_raw_response)
         return metadata
 
     def delta(self, cursor=None):
-        """A way of letting you keep up with changes to files and folders in a
+        '''A way of letting you keep up with changes to files and folders in a
         user's Dropbox.  You can periodically call delta() to get a list of "delta
         entries", which are instructions on how to update your local state to
         match the server's state.
@@ -456,7 +474,7 @@ class DropboxClient(object):
         Remember: Dropbox treats file names in a case-insensitive but case-preserving
         way.  To facilitate this, the *path* strings above are lower-cased versions of
         the actual path.  The *metadata* dicts have the original, case-preserved path.
-        """
+        '''
         path = "/delta"
 
         params = {}
@@ -467,9 +485,8 @@ class DropboxClient(object):
 
         return self.rest_client.POST(url, params, headers)
 
-
     def create_copy_ref(self, from_path):
-        """Creates and returns a copy ref for a specific file.  The copy ref can be
+        '''Creates and returns a copy ref for a specific file.  The copy ref can be
         used to instantly copy that file to the Dropbox of another account.
 
         Args:
@@ -480,7 +497,7 @@ class DropboxClient(object):
 
               ``{"expires":"Fri, 31 Jan 2042 21:01:05 +0000", "copy_ref":"z1X6ATl6aWtzOGq0c3g5Ng"}``
 
-        """
+        '''
         path = "/copy_ref/%s%s" % (self.session.root, format_path(from_path))
 
         url, params, headers = self.request(path, {}, method='GET')
@@ -488,7 +505,7 @@ class DropboxClient(object):
         return self.rest_client.GET(url, headers)
 
     def add_copy_ref(self, copy_ref, to_path):
-        """Adds the file referenced by the copy ref to the specified path
+        '''Adds the file referenced by the copy ref to the specified path
 
         Args:
          - ``copy_ref``: A copy ref string that was returned from a create_copy_ref call.
@@ -497,7 +514,7 @@ class DropboxClient(object):
 
         Returns:
             - A dictionary containing the metadata of the new copy of the file.
-         """
+         '''
         path = "/fileops/copy"
 
         params = {'from_copy_ref': copy_ref,
@@ -509,7 +526,7 @@ class DropboxClient(object):
         return self.rest_client.POST(url, params, headers)
 
     def file_copy(self, from_path, to_path):
-        """Copy a file or folder to a new location.
+        '''Copy a file or folder to a new location.
 
         Args:
             - ``from_path``: The path to the file or folder to be copied.
@@ -532,7 +549,7 @@ class DropboxClient(object):
               - 403: An invalid move operation was attempted (e.g. there is already a file at the given destination, or moving a shared folder into a shared folder).
               - 404: No file was found at given from_path.
               - 503: User over storage quota.
-        """
+        '''
         params = {'root': self.session.root,
                   'from_path': format_path(from_path),
                   'to_path': format_path(to_path),
@@ -542,9 +559,8 @@ class DropboxClient(object):
 
         return self.rest_client.POST(url, params, headers)
 
-
     def file_create_folder(self, path):
-        """Create a folder.
+        '''Create a folder.
 
         Args:
             - ``path``: The path of the new folder.
@@ -560,16 +576,15 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 403: A folder at that path already exists.
-        """
+        '''
         params = {'root': self.session.root, 'path': format_path(path)}
 
         url, params, headers = self.request("/fileops/create_folder", params)
 
         return self.rest_client.POST(url, params, headers)
 
-
     def file_delete(self, path):
-        """Delete a file or folder.
+        '''Delete a file or folder.
 
         Args:
             - ``path``: The path of the file or folder.
@@ -585,16 +600,15 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at the given path.
-        """
+        '''
         params = {'root': self.session.root, 'path': format_path(path)}
 
         url, params, headers = self.request("/fileops/delete", params)
 
         return self.rest_client.POST(url, params, headers)
 
-
     def file_move(self, from_path, to_path):
-        """Move a file or folder to a new location.
+        '''Move a file or folder to a new location.
 
         Args:
             - ``from_path``: The path to the file or folder to be moved.
@@ -616,16 +630,23 @@ class DropboxClient(object):
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at given from_path.
               - 503: User over storage quota.
-        """
-        params = {'root': self.session.root, 'from_path': format_path(from_path), 'to_path': format_path(to_path)}
+        '''
+        params = {'root': self.session.root, 'from_path':
+                  format_path(from_path), 'to_path': format_path(to_path)}
 
         url, params, headers = self.request("/fileops/move", params)
 
         return self.rest_client.POST(url, params, headers)
 
-
-    def metadata(self, path, list=True, file_limit=25000, hash=None, rev=None, include_deleted=False):
-        """Retrieve metadata for a file or folder.
+    def metadata(
+        self,
+        path,
+        list=True,
+        file_limit=25000,
+        hash=None,
+        rev=None,
+            include_deleted=False):
+        '''Retrieve metadata for a file or folder.
 
         A typical use would be:
 
@@ -633,7 +654,7 @@ class DropboxClient(object):
 
             folder_metadata = client.metadata('/')
             print "metadata:", folder_metadata
-        
+
         which would return the metadata of the root directory. This
         will look something like:
 
@@ -653,7 +674,7 @@ class DropboxClient(object):
                        'root': 'dropbox',
                        'size': '0 bytes',
                        'thumb_exists': False
-                    }, 
+                    },
                     {
                        'bytes': 77,
                        'icon': 'page_white_text',
@@ -679,7 +700,7 @@ class DropboxClient(object):
 
         In this example, the root directory contains two things: ``Sample Folder``,
         which is a folder, and ``/magnum-opus.txt``, which is a text file 77 bytes long
- 
+
         Args:
             - ``path``: The path to the file or folder.
             - ``list``: Whether to list all contained files (only applies when
@@ -710,7 +731,7 @@ class DropboxClient(object):
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at given path.
               - 406: Too many file entries to return.
-        """
+        '''
         path = "/metadata/%s%s" % (self.session.root, format_path(path))
 
         params = {'file_limit': file_limit,
@@ -730,7 +751,7 @@ class DropboxClient(object):
         return self.rest_client.GET(url, headers)
 
     def thumbnail(self, from_path, size='large', format='JPEG'):
-        """Download a thumbnail for an image.
+        '''Download a thumbnail for an image.
 
         Unlike most other calls, thumbnail returns a raw HTTPResponse with the connection open.
         You should call .read() and perform any processing you need, then close the HTTPResponse.
@@ -753,16 +774,18 @@ class DropboxClient(object):
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No file was found at the given from_path, or files of that type cannot be thumbnailed.
               - 415: Image is invalid and cannot be thumbnailed.
-        """
-        assert format in ['JPEG', 'PNG'], "expected a thumbnail format of 'JPEG' or 'PNG', got %s" % format
+        '''
+        assert format in [
+            'JPEG', 'PNG'], "expected a thumbnail format of 'JPEG' or 'PNG', got %s" % format
 
         path = "/thumbnails/%s%s" % (self.session.root, format_path(from_path))
 
-        url, params, headers = self.request(path, {'size': size, 'format': format}, method='GET', content_server=True)
+        url, params, headers = self.request(
+            path, {'size': size, 'format': format}, method='GET', content_server=True)
         return self.rest_client.request("GET", url, headers=headers, raw_response=True)
 
     def thumbnail_and_metadata(self, from_path, size='large', format='JPEG'):
-        """Download a thumbnail for an image alongwith its metadata.
+        '''Download a thumbnail for an image alongwith its metadata.
 
         Acts as a thin wrapper around thumbnail() (see :meth:`thumbnail()` comments for
         more details)
@@ -785,14 +808,14 @@ class DropboxClient(object):
               - 404: No file was found at the given from_path, or files of that type cannot be thumbnailed.
               - 415: Image is invalid and cannot be thumbnailed.
               - 200: Request was okay but response was malformed in some way.
-        """
+        '''
         thumbnail_res = self.thumbnail(from_path, size, format)
         metadata = DropboxClient.__parse_metadata_as_dict(thumbnail_res)
 
         return thumbnail_res, metadata
 
     def search(self, path, query, file_limit=1000, include_deleted=False):
-        """Search directory for filenames matching query.
+        '''Search directory for filenames matching query.
 
         Args:
             - ``path``: The directory to search within.
@@ -811,21 +834,21 @@ class DropboxClient(object):
             - A :class:`dropbox.rest.ErrorResponse` with an HTTP status of
 
               - 400: Bad request (may be due to many things; check e.error for details)
-        """
+        '''
         path = "/search/%s%s" % (self.session.root, format_path(path))
 
         params = {
             'query': query,
             'file_limit': file_limit,
             'include_deleted': include_deleted,
-            }
+        }
 
         url, params, headers = self.request(path, params)
 
         return self.rest_client.POST(url, params, headers)
 
     def revisions(self, path, rev_limit=1000):
-        """Retrieve revisions of a file.
+        '''Retrieve revisions of a file.
 
         Args:
             - ``path``: The file to fetch revisions for. Note that revisions
@@ -844,19 +867,19 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: No revisions were found at the given path.
-        """
+        '''
         path = "/revisions/%s%s" % (self.session.root, format_path(path))
 
         params = {
             'rev_limit': rev_limit,
-            }
+        }
 
         url, params, headers = self.request(path, params, method='GET')
 
         return self.rest_client.GET(url, headers)
 
     def restore(self, path, rev):
-        """Restore a file to a previous revision.
+        '''Restore a file to a previous revision.
 
         Args:
             - ``path``: The file to restore. Note that folders can't be restored.
@@ -873,19 +896,19 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: Unable to find the file at the given revision.
-        """
+        '''
         path = "/restore/%s%s" % (self.session.root, format_path(path))
 
         params = {
             'rev': rev,
-            }
+        }
 
         url, params, headers = self.request(path, params)
 
         return self.rest_client.POST(url, params, headers)
 
     def media(self, path):
-        """Get a temporary unauthenticated URL for a media file.
+        '''Get a temporary unauthenticated URL for a media file.
 
         All of Dropbox's API methods require OAuth, which may cause problems in
         situations where an application expects to be able to hit a URL multiple times
@@ -909,7 +932,7 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: Unable to find the file at the given path.
-        """
+        '''
         path = "/media/%s%s" % (self.session.root, format_path(path))
 
         url, params, headers = self.request(path, method='GET')
@@ -917,7 +940,7 @@ class DropboxClient(object):
         return self.rest_client.GET(url, headers)
 
     def share(self, path, short_url=True):
-        """Create a shareable link to a file or folder.
+        '''Create a shareable link to a file or folder.
 
         Shareable links created on Dropbox are time-limited, but don't require any
         authentication, so they can be given out freely. The time limit should allow
@@ -940,20 +963,26 @@ class DropboxClient(object):
 
               - 400: Bad request (may be due to many things; check e.error for details)
               - 404: Unable to find the file at the given path.
-        """
+        '''
         path = "/shares/%s%s" % (self.session.root, format_path(path))
 
         params = {
             'short_url': short_url,
-            }
+        }
 
         url, params, headers = self.request(path, params, method='GET')
 
         return self.rest_client.GET(url, headers)
 
+
 class DropboxOAuth2FlowBase(object):
 
-    def __init__(self, consumer_key, consumer_secret, locale=None, rest_client=RESTClient):
+    def __init__(
+        self,
+        consumer_key,
+        consumer_secret,
+        locale=None,
+            rest_client=RESTClient):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.locale = locale
@@ -987,7 +1016,7 @@ class DropboxOAuth2FlowBase(object):
         return access_token, user_id
 
     def build_path(self, target, params=None):
-        """Build the path component for an API URL.
+        '''Build the path component for an API URL.
 
         This method urlencodes the parameters, adds them
         to the end of the target url, and puts a marker for the API
@@ -999,8 +1028,8 @@ class DropboxOAuth2FlowBase(object):
 
         Returns:
             - The path and parameters components of an API URL.
-        """
-        if sys.version_info < (3,) and type(target) == unicode:
+        '''
+        if sys.version_info < (3,) and isinstance(target, unicode):
             target = target.encode("utf8")
 
         target_path = urllib.quote(target)
@@ -1017,7 +1046,7 @@ class DropboxOAuth2FlowBase(object):
             return "/%d%s" % (BaseSession.API_VERSION, target_path)
 
     def build_url(self, host, target, params=None):
-        """Build an API URL.
+        '''Build an API URL.
 
         This method adds scheme and hostname to the path
         returned from build_path.
@@ -1028,11 +1057,13 @@ class DropboxOAuth2FlowBase(object):
 
         Returns:
             - The full API URL.
-        """
+        '''
         return "https://%s%s" % (host, self.build_path(target, params))
 
+
 class DropboxOAuth2FlowNoRedirect(DropboxOAuth2FlowBase):
-    """
+
+    '''
     OAuth 2 authorization helper for apps that can't provide a redirect URI
     (such as the command-line example apps).
 
@@ -1060,22 +1091,29 @@ class DropboxOAuth2FlowNoRedirect(DropboxOAuth2FlowBase):
             return
 
         c = DropboxClient(access_token)
-    """
+    '''
 
-    def __init__(self, consumer_key, consumer_secret, locale=None, rest_client=None):
-        if rest_client is None: rest_client = RESTClient
-        super(DropboxOAuth2FlowNoRedirect, self).__init__(consumer_key, consumer_secret, locale, rest_client)
+    def __init__(
+        self,
+        consumer_key,
+        consumer_secret,
+        locale=None,
+            rest_client=None):
+        if rest_client is None:
+            rest_client = RESTClient
+        super(DropboxOAuth2FlowNoRedirect, self).__init__(
+            consumer_key, consumer_secret, locale, rest_client)
 
     def start(self):
-        """
+        '''
         Returns the URL for a page on Dropbox's website.  This page will let the user "approve"
         your app, which gives your app permission to access the user's Dropbox account.
         Tell the user to visit this URL and approve your app.
-        """
+        '''
         return self._get_authorize_url(None, None)
 
     def finish(self, code):
-        """
+        '''
         If the user approves your app, they will be presented with an "authorization code".  Have
         the user copy/paste that authorization code into your app and then call this method to
         get an access token.
@@ -1086,11 +1124,13 @@ class DropboxOAuth2FlowNoRedirect(DropboxOAuth2FlowBase):
         Returns a pair of ``(access_token, user_id)``.  ``access_token`` is a string that
         can be passed to DropboxClient.  ``user_id`` is the Dropbox user ID (string) of the user that
         just approved your app.
-        """
+        '''
         return self._finish(code, None)
 
+
 class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
-    """
+
+    '''
     OAuth 2 authorization helper.  Use this for web apps.
 
     OAuth 2 has a two-step authorization process.  The first step is having the user authorize
@@ -1141,18 +1181,21 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
                 logger.log("Auth error: %s" % (e,))
                 http_status(403)
 
-    """
+    '''
 
-    def __init__(self, consumer_key, consumer_secret, redirect_uri, session, csrf_token_session_key,
-                 locale=None, rest_client=None):
-        if rest_client is None: rest_client = RESTClient
-        super(DropboxOAuth2Flow, self).__init__(consumer_key, consumer_secret, locale, rest_client)
+    def __init__(
+        self, consumer_key, consumer_secret, redirect_uri, session, csrf_token_session_key,
+            locale=None, rest_client=None):
+        if rest_client is None:
+            rest_client = RESTClient
+        super(DropboxOAuth2Flow, self).__init__(
+            consumer_key, consumer_secret, locale, rest_client)
         self.redirect_uri = redirect_uri
         self.session = session
         self.csrf_token_session_key = csrf_token_session_key
 
     def start(self, url_state=None):
-        """
+        '''
         Starts the OAuth 2 authorization process.
 
         This function builds an "authorization URL".  You should redirect your user's browser to
@@ -1169,8 +1212,8 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
             authorization process.  This exact value will be returned to you by :meth:`finish()`.
 
         Returns:
-          - 
-        """
+          -
+        '''
         csrf_token = base64.urlsafe_b64encode(os.urandom(16))
         state = csrf_token
         if url_state is not None:
@@ -1180,7 +1223,7 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
         return self._get_authorize_url(self.redirect_uri, state)
 
     def finish(self, query_params):
-        """
+        '''
         Call this after the user has visited the authorize URL (see :meth:`start()`), approved your
         app and was redirected to your redirect URI.
 
@@ -1197,7 +1240,7 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
         :class:`CsrfException`,
         :class:`NotApprovedException`,
         :class:`ProviderException`.
-        """
+        '''
         csrf_token_from_session = self.session[self.csrf_token_session_key]
 
         # Check well-formedness of request.
@@ -1214,14 +1257,16 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
             raise self.BadRequestException("Query parameters 'code' and 'error' are both set; "
                                            " only one must be set.")
         if error is None and code is None:
-            raise self.BadRequestException("Neither query parameter 'code' or 'error' is set.")
+            raise self.BadRequestException(
+                "Neither query parameter 'code' or 'error' is set.")
 
         # Check CSRF token
 
         if csrf_token_from_session is None:
             raise self.BadStateError("Missing CSRF token in session.")
         if len(csrf_token_from_session) <= 20:
-            raise AssertionError("CSRF token unexpectedly short: %r" % (csrf_token_from_session,))
+            raise AssertionError(
+                "CSRF token unexpectedly short: %r" % (csrf_token_from_session,))
 
         split_pos = state.find('|')
         if split_pos < 0:
@@ -1229,10 +1274,11 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
             url_state = None
         else:
             given_csrf_token = state[0:split_pos]
-            url_state = state[split_pos+1:]
+            url_state = state[split_pos + 1:]
 
         if not _safe_equals(csrf_token_from_session, given_csrf_token):
-            raise self.CsrfException("expected %r, got %r" % (csrf_token_from_session, given_csrf_token))
+            raise self.CsrfException("expected %r, got %r" %
+                                     (csrf_token_from_session, given_csrf_token))
 
         del self.session[self.csrf_token_session_key]
 
@@ -1242,9 +1288,11 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
             if error == 'access_denied':
                 # The user clicked "Deny"
                 if error_description is None:
-                    raise self.NotApprovedException("No additional description from Dropbox")
+                    raise self.NotApprovedException(
+                        "No additional description from Dropbox")
                 else:
-                    raise self.NotApprovedException("Additional description from Dropbox: " + error_description)
+                    raise self.NotApprovedException(
+                        "Additional description from Dropbox: " + error_description)
             else:
                 # All other errors
                 full_message = error
@@ -1258,49 +1306,56 @@ class DropboxOAuth2Flow(DropboxOAuth2FlowBase):
         return access_token, user_id, url_state
 
     class BadRequestException(Exception):
-        """
+
+        '''
         Thrown if the redirect URL was missing parameters or if the given parameters were not valid.
-        
+
         The recommended action is to show an HTTP 400 error page.
-        """
+        '''
         pass
 
     class BadStateException(Exception):
-        """
+
+        '''
         Thrown if all the parameters are correct, but there's no CSRF token in the session.  This
         probably means that the session expired.
 
         The recommended action is to redirect the user's browser to try the approval process again.
-        """
+        '''
         pass
 
     class CsrfException(Exception):
-        """
+
+        '''
         Thrown if the given 'state' parameter doesn't contain the CSRF token from the user's session.
         This is blocked to prevent CSRF attacks.
 
         The recommended action is to respond with an HTTP 403 error page.
-        """
+        '''
         pass
 
     class NotApprovedException(Exception):
-        """
+
+        '''
         The user chose not to approve your app.
-        """
+        '''
         pass
 
     class ProviderException(Exception):
-        """
+
+        '''
         Dropbox redirected to your redirect URI with some unexpected error identifier and error
         message.
 
         The recommended action is to log the error, tell the user something went wrong, and let
         them try again.
-        """
+        '''
         pass
 
+
 def _safe_equals(a, b):
-    if len(a) != len(b): return False
+    if len(a) != len(b):
+        return False
     res = 0
     for ca, cb in zip(a, b):
         res |= ord(ca) ^ ord(cb)

@@ -1,12 +1,12 @@
-"""
-dropbox.session.DropboxSession is responsible for holding OAuth authentication
-info (app key/secret, request key/secret, access key/secret). It knows how to
-use all of this information to craft properly constructed requests to Dropbox.
+''' dropbox.session.DropboxSession is responsible for holding OAuth
+authentication info (app key/secret, request key/secret, access key/secret).
+It knows how to use all of this information to craft properly constructed
+requests to Dropbox.
 
-A DropboxSession object must be passed to a dropbox.client.DropboxClient object upon
-initialization.
+A DropboxSession object must be passed to a dropbox.client.DropboxClient
+object upon initialization.
 
-"""
+'''
 from __future__ import absolute_import
 
 import random
@@ -22,43 +22,56 @@ except ImportError:
 
 from . import rest
 
+
 class OAuthToken(object):
-    """
+
+    '''
     A class representing an OAuth token. Contains two fields: ``key`` and
     ``secret``.
-    """
+    '''
+
     def __init__(self, key, secret):
         self.key = key
         self.secret = secret
 
+
 class BaseSession(object):
     API_VERSION = 1
 
-    API_HOST = "api.dropbox.com"
-    WEB_HOST = "www.dropbox.com"
-    API_CONTENT_HOST = "api-content.dropbox.com"
+    API_HOST =  'api.dropbox.com'
+    WEB_HOST =  'www.dropbox.com'
+    API_CONTENT_HOST =  'api-content.dropbox.com'
+    ACCESS_TYPES = ('dropbox', 'app_folder', 'auto')
 
-    def __init__(self, consumer_key, consumer_secret, access_type="auto", locale=None, rest_client=rest.RESTClient):
-        """Initialize a DropboxSession object.
+    def __init__(
+        self,
+        consumer_key,
+        consumer_secret,
+        access_type= 'auto' ,
+        locale=None,
+            rest_client=rest.RESTClient):
+        '''Initialize a DropboxSession object.
 
-        Your consumer key and secret are available
-        at https://www.dropbox.com/developers/apps
+        Your consumer key and secret are available at
+        https://www.dropbox.com/developers/apps
 
         Args:
 
             - ``access_type``: Either 'auto' (the default), 'dropbox', or
-                'app_folder'. You probably don't need to specify this and should
-                just use the default.
-            - ``locale``: A locale string ('en', 'pt_PT', etc.) [optional]
-                The locale setting will be used to translate any user-facing error
-                messages that the server generates. At this time Dropbox supports
-                'en', 'es', 'fr', 'de', and 'ja', though we will be supporting more
-                languages in the future. If you send a language the server doesn't
-                support, messages will remain in English. Look for these translated
-                messages in rest.ErrorResponse exceptions as e.user_error_msg.
+              'app_folder'. You probably don't need to specify this and should
+              just use the default.
+            - ``locale``: A locale string ('en', 'pt_PT', etc.) [optional] The
+              locale setting will be used to translate any user-facing error
+              messages that the server generates. At this time Dropbox
+              supports 'en', 'es', 'fr', 'de', and 'ja', though we will be
+              supporting more languages in the future. If you send a language
+              the server doesn't support, messages will remain in English.
+              Look for these translated messages in rest.ErrorResponse
+              exceptions as e.user_error_msg.
 
-        """
-        assert access_type in ['dropbox', 'app_folder', 'auto'], "expected access_type of 'dropbox' or 'app_folder'"
+        '''
+        assert access_type in self.ACCESS_TYPES, ('expected access_type of %s' 
+            % ', '.join(self.ACCESS_TYPES))
         self.consumer_creds = OAuthToken(consumer_key, consumer_secret)
         self.token = None
         self.request_token = None
@@ -67,15 +80,15 @@ class BaseSession(object):
         self.rest_client = rest_client
 
     def is_linked(self):
-        """Return whether the DropboxSession has an access token attached."""
+        '''Return whether the DropboxSession has an access token attached.'''
         return bool(self.token)
 
     def unlink(self):
-        """Remove any attached access token from the DropboxSession."""
+        '''Remove any attached access token from the DropboxSession.'''
         self.token = None
 
     def build_path(self, target, params=None):
-        """Build the path component for an API URL.
+        '''Build the path component for an API URL.
 
         This method urlencodes the parameters, adds them
         to the end of the target url, and puts a marker for the API
@@ -87,9 +100,9 @@ class BaseSession(object):
 
         Returns:
             - The path and parameters components of an API URL.
-        """
-        if sys.version_info < (3,) and type(target) == unicode:
-            target = target.encode("utf8")
+        '''
+        if sys.version_info < (3,) and isinstance(target, unicode):
+            target = target.encode('utf8' )
 
         target_path = urllib.quote(target)
 
@@ -100,12 +113,12 @@ class BaseSession(object):
             params['locale'] = self.locale
 
         if params:
-            return "/%d%s?%s" % (self.API_VERSION, target_path, urllib.urlencode(params))
+            return  '/%d%s?%s'  % (self.API_VERSION, target_path, urllib.urlencode(params))
         else:
-            return "/%d%s" % (self.API_VERSION, target_path)
+            return  '/%d%s'  % (self.API_VERSION, target_path)
 
     def build_url(self, host, target, params=None):
-        """Build an API URL.
+        '''Build an API URL.
 
         This method adds scheme and hostname to the path
         returned from build_path.
@@ -116,29 +129,30 @@ class BaseSession(object):
 
         Returns:
             - The full API URL.
-        """
-        return "https://%s%s" % (host, self.build_path(target, params))
+        '''
+        return  'https://%s%s'  % (host, self.build_path(target, params))
+
 
 class DropboxSession(BaseSession):
 
     def set_token(self, access_token, access_token_secret):
-        """Attach an access token to the DropboxSession.
+        '''Attach an access token to the DropboxSession.
 
         Note that the access 'token' is made up of both a token string
         and a secret string.
-        """
+        '''
         self.token = OAuthToken(access_token, access_token_secret)
 
     def set_request_token(self, request_token, request_token_secret):
-        """Attach an request token to the DropboxSession.
+        '''Attach an request token to the DropboxSession.
 
         Note that the request 'token' is made up of both a token string
         and a secret string.
-        """
+        '''
         self.request_token = OAuthToken(request_token, request_token_secret)
 
     def build_authorize_url(self, request_token, oauth_callback=None):
-        """Build a request token authorization URL.
+        '''Build a request token authorization URL.
 
         After obtaining a request token, you'll need to send the user to
         the URL returned from this function so that they can confirm that
@@ -151,7 +165,7 @@ class DropboxSession(BaseSession):
 
         Returns:
             - An authorization for the given request token.
-        """
+        '''
         params = {'oauth_token': request_token.key,
                   }
 
@@ -161,7 +175,7 @@ class DropboxSession(BaseSession):
         return self.build_url(self.WEB_HOST, '/oauth/authorize', params)
 
     def obtain_request_token(self):
-        """Obtain a request token from the Dropbox API.
+        '''Obtain a request token from the Dropbox API.
 
         This is your first step in the OAuth process.  You call this to get a
         request_token from the Dropbox server that you can then use with
@@ -176,17 +190,18 @@ class DropboxSession(BaseSession):
             - An :py:class:`OAuthToken` object representing the
               request token Dropbox assigned to this app. Also attaches the
               request token as self.request_token.
-        """
-        self.token = None # clear any token currently on the request
+        '''
+        self.token = None  # clear any token currently on the request
         url = self.build_url(self.API_HOST, '/oauth/request_token')
         headers, params = self.build_access_headers('POST', url)
 
-        response = self.rest_client.POST(url, headers=headers, params=params, raw_response=True)
+        response = self.rest_client.POST(
+            url, headers=headers, params=params, raw_response=True)
         self.request_token = self._parse_token(response.read())
         return self.request_token
 
     def obtain_access_token(self, request_token=None):
-        """Obtain an access token for a user.
+        '''Obtain an access token for a user.
 
         After you get a request token, and then send the user to the authorize
         URL, you can use the authorized request token with this method to get the
@@ -205,18 +220,25 @@ class DropboxSession(BaseSession):
             - An :py:class:`OAuthToken` object with fields ``key`` and ``secret``
               representing the access token Dropbox assigned to this app and
               user. Also attaches the access token as self.token.
-        """
+        '''
         request_token = request_token or self.request_token
-        assert request_token, "No request_token available on the session. Please pass one."
+        assert request_token,  'No request_token available on the session. Please pass one.'
         url = self.build_url(self.API_HOST, '/oauth/access_token')
-        headers, params = self.build_access_headers('POST', url, request_token=request_token)
+        headers, params = self.build_access_headers(
+            'POST', url, request_token=request_token)
 
-        response = self.rest_client.POST(url, headers=headers, params=params, raw_response=True)
+        response = self.rest_client.POST(
+            url, headers=headers, params=params, raw_response=True)
         self.token = self._parse_token(response.read())
         return self.token
 
-    def build_access_headers(self, method, resource_url, params=None, request_token=None):
-        """Build OAuth access headers for a future request.
+    def build_access_headers(
+        self,
+        method,
+        resource_url,
+        params=None,
+            request_token=None):
+        '''Build OAuth access headers for a future request.
 
         Args:
             - ``method``: The HTTP method being used (e.g. 'GET' or 'POST').
@@ -229,17 +251,17 @@ class DropboxSession(BaseSession):
               of header names and values appropriate for passing into dropbox.rest.RESTClient
               and params is a dictionary like the one that was passed in, but augmented with
               oauth-related parameters as appropriate.
-        """
+        '''
         if params is None:
             params = {}
         else:
             params = params.copy()
 
         oauth_params = {
-            'oauth_consumer_key' : self.consumer_creds.key,
-            'oauth_timestamp' : self._generate_oauth_timestamp(),
-            'oauth_nonce' : self._generate_oauth_nonce(),
-            'oauth_version' : self._oauth_version(),
+            'oauth_consumer_key': self.consumer_creds.key,
+            'oauth_timestamp': self._generate_oauth_timestamp(),
+            'oauth_nonce': self._generate_oauth_nonce(),
+            'oauth_version': self._oauth_version(),
         }
 
         token = request_token if request_token is not None else self.token
@@ -255,10 +277,10 @@ class DropboxSession(BaseSession):
 
     @classmethod
     def _oauth_sign_request(cls, params, consumer_pair, token_pair):
-        params.update({'oauth_signature_method' : 'PLAINTEXT',
-                       'oauth_signature' : ('%s&%s' % (consumer_pair.secret, token_pair.secret)
-                                            if token_pair is not None else
-                                            '%s&' % (consumer_pair.secret,))})
+        params.update({'oauth_signature_method': 'PLAINTEXT',
+                       'oauth_signature': ('%s&%s' % (consumer_pair.secret, token_pair.secret)
+                                           if token_pair is not None else
+                                           '%s&' % (consumer_pair.secret,))})
 
     @classmethod
     def _generate_oauth_timestamp(cls):
@@ -275,11 +297,11 @@ class DropboxSession(BaseSession):
     @classmethod
     def _parse_token(cls, s):
         if not s:
-            raise ValueError("Invalid parameter string.")
+            raise ValueError('Invalid parameter string.' )
 
         params = parse_qs(s, keep_blank_values=False)
         if not params:
-            raise ValueError("Invalid parameter string: %r" % s)
+            raise ValueError('Invalid parameter string: %r'  % s)
 
         try:
             key = params['oauth_token'][0]
@@ -290,18 +312,31 @@ class DropboxSession(BaseSession):
             secret = params['oauth_token_secret'][0]
         except Exception:
             raise ValueError("'oauth_token_secret' not found in "
-                             "OAuth request.")
+                              'OAuth request.' )
 
         return OAuthToken(key, secret)
 
-# Don't use this class directly.
+  # Don't use this class directly.
+
+
 class DropboxOAuth2Session(BaseSession):
 
-    def __init__(self, oauth2_access_token, locale, rest_client=rest.RESTClient):
-        super(DropboxOAuth2Session, self).__init__("", "", "auto", locale=locale, rest_client=rest_client)
+    def __init__(
+        self,
+        oauth2_access_token,
+        locale,
+            rest_client=rest.RESTClient):
+        super(DropboxOAuth2Session, self).__init__(
+             '' , '',  'auto' , locale=locale, rest_client=rest_client)
         self.access_token = oauth2_access_token
 
-    def build_access_headers(self, method, resource_url, params=None, token=None):
+    def build_access_headers(
+        self,
+        method,
+        resource_url,
+        params=None,
+            token=None):
         assert token is None
-        headers = {"Authorization": "Bearer " + self.access_token}
+        headers = { 'Authorization' :  'Bearer '  + self.access_token}
         return headers, params
+
