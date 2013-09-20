@@ -14,6 +14,7 @@ from dropbox import client, rest
 APP_KEY = ''
 APP_SECRET = ''
 
+
 def command(login_required=True):
     """a decorator for handling authentication and exceptions"""
     def decorate(f):
@@ -24,15 +25,16 @@ def command(login_required=True):
 
             try:
                 return f(self, *args)
-            except TypeError, e:
+            except TypeError as e:
                 self.stdout.write(str(e) + '\n')
-            except rest.ErrorResponse, e:
+            except rest.ErrorResponse as e:
                 msg = e.user_error_msg or str(e)
                 self.stdout.write('Error: %s\n' % msg)
 
         wrapper.__doc__ = f.__doc__
         return wrapper
     return decorate
+
 
 class DropboxTerm(cmd.Cmd):
     TOKEN_FILE = "token_store.txt"
@@ -50,7 +52,7 @@ class DropboxTerm(cmd.Cmd):
             self.api_client = client.DropboxClient(token)
             print "[loaded access token]"
         except IOError:
-            pass # don't worry if it's not there
+            pass  # don't worry if it's not there
 
     @command()
     def do_ls(self):
@@ -74,16 +76,18 @@ class DropboxTerm(cmd.Cmd):
     @command(login_required=False)
     def do_login(self):
         """log in to a Dropbox account"""
-        flow = client.DropboxOAuth2FlowNoRedirect(self.app_key, self.app_secret)
+        flow = client.DropboxOAuth2FlowNoRedirect(
+            self.app_key, self.app_secret)
         authorize_url = flow.start()
         sys.stdout.write("1. Go to: " + authorize_url + "\n")
-        sys.stdout.write("2. Click \"Allow\" (you might have to log in first).\n")
+        sys.stdout.write(
+            "2. Click \"Allow\" (you might have to log in first).\n")
         sys.stdout.write("3. Copy the authorization code.\n")
         code = raw_input("Enter the authorization code here: ").strip()
 
         try:
             access_token, user_id = flow.finish(code)
-        except rest.ErrorResponse, e:
+        except rest.ErrorResponse as e:
             self.stdout.write('Error: %s\n' % str(e))
             return
 
@@ -101,7 +105,8 @@ class DropboxTerm(cmd.Cmd):
     @command()
     def do_cat(self, path):
         """display the contents of a file"""
-        f, metadata = self.api_client.get_file_and_metadata(self.current_path + "/" + path)
+        f, metadata = self.api_client.get_file_and_metadata(
+            self.current_path + "/" + path)
         self.stdout.write(f.read())
         self.stdout.write("\n")
 
@@ -146,7 +151,8 @@ class DropboxTerm(cmd.Cmd):
         """
         to_file = open(os.path.expanduser(to_path), "wb")
 
-        f, metadata = self.api_client.get_file_and_metadata(self.current_path + "/" + from_path)
+        f, metadata = self.api_client.get_file_and_metadata(
+            self.current_path + "/" + from_path)
         print 'Metadata:', metadata
         to_file.write(f.read())
 
@@ -162,7 +168,7 @@ class DropboxTerm(cmd.Cmd):
         to_file = open(os.path.expanduser(to_path), "wb")
 
         f, metadata = self.api_client.thumbnail_and_metadata(
-                self.current_path + "/" + from_path, size, format)
+            self.current_path + "/" + from_path, size, format)
         print 'Metadata:', metadata
         to_file.write(f.read())
 

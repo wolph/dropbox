@@ -1,26 +1,35 @@
 #!/usr/bin/env python
 
 import dropbox
-import sys, os, json, re
+import sys
+import os
+import json
+import re
 
 APP_KEY = ''
 APP_SECRET = ''
 
 STATE_FILE = 'copy_between_accounts.json'
 
+
 def main():
     if APP_KEY == '' or APP_SECRET == '':
-        sys.stderr.write("ERROR: Set your APP_KEY and APP_SECRET at the top of %r.\n" % __file__)
+        sys.stderr.write(
+            "ERROR: Set your APP_KEY and APP_SECRET at the top of %r.\n" % __file__)
         sys.exit(1)
 
     prog_name = sys.argv[0]
     args = sys.argv[1:]
     if len(args) == 0:
         sys.stderr.write("Usage:\n")
-        sys.stderr.write("   %s link                                   Link to a user's account.  Also displays UID.\n" % prog_name)
-        sys.stderr.write("   %s list                                   List linked users including UID..\n" % prog_name)
-        sys.stderr.write("   %s copy '<uid>:<path>' '<uid>:<path>'     Copies a file from the first user's path, to the second user's path.\n" % prog_name)
-        sys.stderr.write("\n   <uid> is the account UID shown when linked.  <path> is a path to a file on that user's dropbox.\n")
+        sys.stderr.write(
+            "   %s link                                   Link to a user's account.  Also displays UID.\n" % prog_name)
+        sys.stderr.write(
+            "   %s list                                   List linked users including UID..\n" % prog_name)
+        sys.stderr.write(
+            "   %s copy '<uid>:<path>' '<uid>:<path>'     Copies a file from the first user's path, to the second user's path.\n" % prog_name)
+        sys.stderr.write(
+            "\n   <uid> is the account UID shown when linked.  <path> is a path to a file on that user's dropbox.\n")
         exit(0)
 
     command = args[0]
@@ -34,7 +43,6 @@ def main():
         sys.stderr.write("ERROR: Unknown command: \"%s\"\n" % command)
         sys.stderr.write("Run with no arguments for help.\n")
         exit(1)
-
 
 
 def command_link(args):
@@ -55,15 +63,17 @@ def command_link(args):
     c = dropbox.client.DropboxClient(access_token)
     account_info = c.account_info()
 
-    sys.stdout.write("Link successful. %s is uid %s\n" % (account_info['display_name'], account_info['uid']))
+    sys.stdout.write("Link successful. %s is uid %s\n" %
+                     (account_info['display_name'], account_info['uid']))
 
     state = load_state()
     state[account_info['uid']] = {
-                    'access_token' : access_token,
-                    'display_name' : account_info['display_name'],
+        'access_token': access_token,
+        'display_name': account_info['display_name'],
     }
 
     save_state(state)
+
 
 def command_list(args):
     if len(args) != 1:
@@ -74,6 +84,7 @@ def command_list(args):
     for e in state.keys():
         sys.stdout.write("%s is uid %s\n" % (state[e]['display_name'], e))
 
+
 def command_copy(args):
     if len(args) != 3:
         sys.stderr.write("ERROR: \"copy\" takes exactly two arguments")
@@ -82,21 +93,24 @@ def command_copy(args):
     state = load_state()
 
     if len(state.keys()) < 2:
-        sys.stderr.write("ERROR: You can't use the copy command until at least two users have linked")
+        sys.stderr.write(
+            "ERROR: You can't use the copy command until at least two users have linked")
         exit(1)
 
     from_ = re.sub("['\"]", '', args[1])
     to_ = re.sub("['\"]", '', args[2])
 
     if not to_.count(':') or not from_.count(':'):
-        sys.stderr.write("ERROR: Ill-formated paths. Run copy_between_accounts without arugments to see documentation.\n")
+        sys.stderr.write(
+            "ERROR: Ill-formated paths. Run copy_between_accounts without arugments to see documentation.\n")
         exit(1)
 
     from_uid, from_path = from_.split(":")
     to_uid, to_path = to_.split(":")
 
     if not to_uid in state or not from_uid in state:
-        sys.stderr.write("ERROR: Those UIDs have not linked.  Run with the \"list\" option to see linked UIDs.\n")
+        sys.stderr.write(
+            "ERROR: Those UIDs have not linked.  Run with the \"list\" option to see linked UIDs.\n")
         exit(1)
 
     from_client = dropbox.client.DropboxClient(state[from_uid]['access_token'])
@@ -107,7 +121,8 @@ def command_copy(args):
 
     metadata = to_client.add_copy_ref(copy_ref, to_path)
 
-    sys.stdout.write("File successly copied from %s to %s!\n" % (state[from_uid]['display_name'], state[to_uid]['display_name']))
+    sys.stdout.write("File successly copied from %s to %s!\n" %
+                     (state[from_uid]['display_name'], state[to_uid]['display_name']))
     sys.stdout.write("The file now exists at %s\n" % metadata['path'])
 
 
@@ -118,6 +133,7 @@ def load_state():
     state = json.load(f)
     f.close()
     return state
+
 
 def save_state(state):
     f = open(STATE_FILE, 'w')

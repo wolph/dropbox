@@ -70,7 +70,7 @@ class BaseSession(object):
               exceptions as e.user_error_msg.
 
         '''
-        assert access_type in self.ACCESS_TYPES, ('expected access_type of %s' 
+        assert access_type in self.ACCESS_TYPES, ('expected access_type of %s'
             % ', '.join(self.ACCESS_TYPES))
         self.consumer_creds = OAuthToken(consumer_key, consumer_secret)
         self.token = None
