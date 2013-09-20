@@ -11,7 +11,8 @@ parent_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 INSTALL_REQUIRES = []
 if sys.version_info < (2, 6):
-    INSTALL_REQUIRES.append('simplejson') # The 'json' module is included with Python 2.6+
+    # The 'json' module is included with Python 2.6+
+    INSTALL_REQUIRES.append('simplejson')
     INSTALL_REQUIRES.append('ssl')  # This module is built in to Python 2.6+
 
 extra = {}
@@ -31,17 +32,17 @@ if sys.version_info >= (3,):
 else:
     TEST_SUITE = 'tests'
 
-setup(name='dropbox',
-      version='1.6',
-      description='Official Dropbox REST API Client',
-      author='Dropbox, Inc.',
-      author_email='support-api@dropbox.com',
-      url='http://www.dropbox.com/',
+setup(name='dropbox2',
+      version='1.7',
+      description='Dropbox REST API Client with more consistent responses.',
+      author='Rick van Hattem',
+      author_email='Rick@Wol.ph',
+      url='http://wol.ph/',
       packages=['dropbox', 'tests'],
       install_requires=INSTALL_REQUIRES,
       package_data={'dropbox': ['trusted-certs.crt'],
-                    'tests' : ['server.crt', 'server.key']},
+                    'tests': ['server.crt', 'server.key']},
       test_suite=TEST_SUITE,
       tests_require=['mock'],
       **extra
-     )
+      )

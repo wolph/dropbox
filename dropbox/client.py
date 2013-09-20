@@ -13,6 +13,7 @@ except ImportError:
 
 from .rest import ErrorResponse, RESTClient
 from .session import BaseSession, DropboxSession, DropboxOAuth2Session
+from . import metadata
 
 
 def format_path(path):
@@ -119,7 +120,7 @@ class DropboxClient(object):
         '''
         url, params, headers = self.request("/account/info", method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataDict(self.rest_client.GET(url, headers))
 
     def get_chunked_uploader(self, file_obj, length):
         '''Creates a ChunkedUploader to upload the given file-like object.
@@ -334,7 +335,8 @@ class DropboxClient(object):
         url, params, headers = self.request(
             path, params, method='PUT', content_server=True)
 
-        return self.rest_client.PUT(url, file_obj, headers)
+        return metadata.MetadataDict(self.rest_client.PUT(url, file_obj,
+                                                          headers))
 
     def get_file(self, from_path, rev=None):
         '''Download a file.
@@ -417,16 +419,16 @@ class DropboxClient(object):
         '''Parses file metadata from a raw dropbox HTTP response, raising a
         :class:`dropbox.rest.ErrorResponse` if parsing fails.
         '''
-        metadata = None
+        data = None
         for header, header_val in dropbox_raw_response.getheaders():
-            if header.lower() == 'x-dropbox-metadata':
+            if header.lower() == 'x-dropbox-data':
                 try:
-                    metadata = json.loads(header_val)
+                    data = json.loads(header_val)
                 except ValueError:
                     raise ErrorResponse(dropbox_raw_response)
-        if not metadata:
+        if not data:
             raise ErrorResponse(dropbox_raw_response)
-        return metadata
+        return metadata.MetadataDict(metadata)
 
     def delta(self, cursor=None):
         '''A way of letting you keep up with changes to files and folders in a
@@ -483,7 +485,8 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, params)
 
-        return self.rest_client.POST(url, params, headers)
+        return metadata.MetadataDict(
+            self.rest_client.POST(url, params, headers))
 
     def create_copy_ref(self, from_path):
         '''Creates and returns a copy ref for a specific file.  The copy ref can be
@@ -502,7 +505,7 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, {}, method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataDict(self.rest_client.GET(url, headers))
 
     def add_copy_ref(self, copy_ref, to_path):
         '''Adds the file referenced by the copy ref to the specified path
@@ -523,21 +526,24 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, params)
 
-        return self.rest_client.POST(url, params, headers)
+        return metadata.MetadataDict(self.rest_client.POST(url, params,
+                                                           headers))
 
     def file_copy(self, from_path, to_path):
         '''Copy a file or folder to a new location.
 
         Args:
             - ``from_path``: The path to the file or folder to be copied.
-            - ``to_path``: The destination path of the file or folder to be copied.
+            - ``to_path``: The destination path of the file or folder to be
+              copied.
               This parameter should include the destination filename (e.g.
               from_path: '/test.txt', to_path: '/dir/test.txt'). If there's
               already a file at the to_path it will raise an ErrorResponse.
 
 
         Returns:
-            - A dictionary containing the metadata of the new copy of the file or folder.
+            - A dictionary containing the metadata of the new copy of the file
+              or folder.
 
               For a detailed description of what this call returns, visit:
               https://www.dropbox.com/developers/reference/api#fileops-copy
@@ -545,8 +551,11 @@ class DropboxClient(object):
         Raises:
             - A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
 
-              - 400: Bad request (may be due to many things; check e.error for details)
-              - 403: An invalid move operation was attempted (e.g. there is already a file at the given destination, or moving a shared folder into a shared folder).
+              - 400: Bad request (may be due to many things; check e.error for
+                details)
+              - 403: An invalid move operation was attempted (e.g. there is
+                already a file at the given destination, or moving a shared
+                folder into a shared folder).
               - 404: No file was found at given from_path.
               - 503: User over storage quota.
         '''
@@ -557,7 +566,8 @@ class DropboxClient(object):
 
         url, params, headers = self.request("/fileops/copy", params)
 
-        return self.rest_client.POST(url, params, headers)
+        return metadata.MetadataDict(self.rest_client.POST(url, params,
+                                                           headers))
 
     def file_create_folder(self, path):
         '''Create a folder.
@@ -748,7 +758,7 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, params, method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataDict(self.rest_client.GET(url, headers))
 
     def thumbnail(self, from_path, size='large', format='JPEG'):
         '''Download a thumbnail for an image.
@@ -876,7 +886,7 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, params, method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataList(self.rest_client.GET(url, headers))
 
     def restore(self, path, rev):
         '''Restore a file to a previous revision.
@@ -937,7 +947,7 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataDict(self.rest_client.GET(url, headers))
 
     def share(self, path, short_url=True):
         '''Create a shareable link to a file or folder.
@@ -972,7 +982,7 @@ class DropboxClient(object):
 
         url, params, headers = self.request(path, params, method='GET')
 
-        return self.rest_client.GET(url, headers)
+        return metadata.MetadataDict(self.rest_client.GET(url, headers))
 
 
 class DropboxOAuth2FlowBase(object):
