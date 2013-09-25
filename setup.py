@@ -8,7 +8,7 @@ import setuptools
 
 parent_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-INSTALL_REQUIRES = ['dateutil']
+INSTALL_REQUIRES = ['python-dateutil']
 if sys.version_info < (2, 6):
     # The 'json' module is included with Python 2.6+
     INSTALL_REQUIRES.append('simplejson')
