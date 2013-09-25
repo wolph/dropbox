@@ -4,12 +4,11 @@ import os
 import subprocess
 import shutil
 import sys
-
-from setuptools import setup, find_packages
+import setuptools
 
 parent_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-INSTALL_REQUIRES = []
+INSTALL_REQUIRES = ['dateutil']
 if sys.version_info < (2, 6):
     # The 'json' module is included with Python 2.6+
     INSTALL_REQUIRES.append('simplejson')
@@ -32,17 +31,19 @@ if sys.version_info >= (3,):
 else:
     TEST_SUITE = 'tests'
 
-setup(name='dropbox2',
-      version='1.7',
-      description='Dropbox REST API Client with more consistent responses.',
-      author='Rick van Hattem',
-      author_email='Rick@Wol.ph',
-      url='http://wol.ph/',
-      packages=['dropbox', 'tests'],
-      install_requires=INSTALL_REQUIRES,
-      package_data={'dropbox': ['trusted-certs.crt'],
-                    'tests': ['server.crt', 'server.key']},
-      test_suite=TEST_SUITE,
-      tests_require=['mock'],
-      **extra
-      )
+setuptools.setup(
+    name='dropbox2',
+    version='1.7.1',
+    description='Dropbox REST API Client with more consistent responses.',
+    author='Rick van Hattem',
+    author_email='Rick@Wol.ph',
+    url='http://wol.ph/',
+    packages=['dropbox', 'tests'],
+    install_requires=INSTALL_REQUIRES,
+    package_data={'dropbox': ['trusted-certs.crt'],
+                  'tests': ['server.crt', 'server.key']},
+    test_suite=TEST_SUITE,
+    tests_require=['mock'],
+    **extra
+)
+
